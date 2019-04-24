@@ -1,0 +1,117 @@
+# coding=gbk
+import requests
+import json
+import pandas as pd
+from lxml import etree
+import re
+import csv
+
+# false=""
+# true=""
+# null=""
+
+def download(url):
+    headers={
+        "authority":"www.toutiao.com",
+        "accept":"application/json",
+        "cookie":"tt_webid=UM_distide0500427da2a543680c200ee161; _ga=GA1.2.846289002.1555920121; CNZZDATA1259612802=450841153-1555907327-https%253A%252F%252Fwww.baidu.com%252F%7C1556003494; __tasessionId=pvm4sk1561556005960158; s_v_web_id=b3da262bf518fdcf2df06210b0065a55",
+        "referer":"https://www.toutiao.com/search/?keyword=%E6%B2%B3%E5%8D%97%20%E6%A0%BE%E5%B7%9D",
+        "user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.75 Safari/537.36",
+    }
+
+    html=requests.get(url,headers=headers,verify=False,timeout=10).text
+    print(html)
+    print(type(html))
+    # return eval(html)
+    return json.loads(html)
+
+
+def download1(url):
+    headers1={
+        "authority":"www.toutiao.com",
+        "accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3",
+        "cookie":"tt_webid=6682589457788569099;788569099; UM_distinctid=16a438f23b819c-0a360ff16c1a3d-7a1b34-e1000-16a438f23b93f9; csrftoken=ddb7de0500427da2a543680c200ee161; _ga=GA1.2.846289002.1555920121; CNZZDATA1259612802=450841153-1555907327-https%253A%252F%252Fwww.baidu.com%252F%7C1556003494; s_v_web_id=b3da262bf518fdcf2df06210b0065a55; __tasessionId=9xpt12cca1556008616299",
+        "referer":"https://www.toutiao.com/search/?keyword=%E6%B2%B3%E5%8D%97%20%E6%A0%BE%E5%B7%9D",
+        "user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.75 Safari/537.36",
+    }
+
+    html=requests.get(url,headers=headers1,verify=False,timeout=10).text
+    return html
+    # html = requests.get(url=url,headers=headers1,allow_redirects=False)
+    # print(html.status_code)
+    # # print(html.headers["location"])
+    # if html.status_code == 302:
+    #     new_id_url = html.headers["location"]
+    #     print(new_id_url)
+    #
+    #     return new_id_url
+    # else:
+    #     print("++++++++++++++++")
+    #     print(url)
+    #     # print(requests.get(url=url,headers=headers1).text)
+    #     return etree.HTML(requests.get(url=url).text)
+
+list_all=[]
+
+key_words=pd.read_csv(r"C:\Users\Lavector\Desktop\百事小红书\redbook.csv",engine='python',header=None).values.tolist()
+# for l in range(1):
+for l in range(1,len(key_words)):
+    key_word=key_words[l][0]
+    print(len(key_word))
+    print(key_word)
+    list_all.append(key_word)
+# print(list_all)
+    try:
+        for i in range(20):
+            print("第{}页".format(i+1))
+            key_url="https://www.toutiao.com/api/search/content/?aid=24&app_name=web_search&offset={}&format=json&keyword={}&autoload=true&count=20&en_qc=1&cur_tab=1&from=search_tab".format(20*i,key_word)
+            key_html=download(key_url)
+            # print(key_html['data'])
+            # print(key_html['data'][0])
+            # print(key_html['data'][1])
+            # print(key_html['data'][2])
+            print(len(key_html['data']))
+            # print(key_html['data'][0][1]['media_name'])
+
+            for k in range(len(key_html['data'])-1):
+                print(k)
+                print(key_html['data'][k])
+                # try:
+                if not k ==9 :
+                    if key_html['data'][k]['app_info']['query_type']=="SearchAggregationInternalQueryType" :
+                        name=key_html['data'][k]['media_name']
+                        time=key_html['data'][k]['datetime']
+                        title=key_html['data'][k]['title']
+                        abstract=key_html['data'][k]['abstract']
+                        article_url=key_html['data'][k]['article_url']
+                        article_html=download1(article_url)
+                        content=''.join(re.findall('([\u4E00-\u9FA5])',article_html,re.S))
+
+                        list_all.append([key_word,name,time,title,abstract,content,article_url])
+                        print([key_word,name,time,title,abstract,content,article_url])
+                        print("+++++++++++++++++++++++++++++++++++++++++======")
+                    # elif key_html['data'][k]['cell_type']==20:
+                    #     pass
+
+                    else:
+                        pass
+                else:
+                    pass
+    except Exception as e:
+        with open("头条3.csv", "w", encoding="utf-8", newline="") as f:
+            k = csv.writer(f, dialect="excel")
+            k.writerow(["关键词", "发表人", "发布时间", "标题", "简介", "内容", "链接"])
+
+            for list in list_all:
+                k.writerow(list)
+        print(e)
+        print('************')
+
+        pass
+
+with open("头条3.csv", "w", encoding="utf-8", newline="") as f:
+    k = csv.writer(f, dialect="excel")
+    k.writerow(["关键词", "发表人","发布时间", "标题", "简介", "内容","链接"])
+
+    for list in list_all:
+        k.writerow(list)
